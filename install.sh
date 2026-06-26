@@ -15,7 +15,7 @@ print_with_delay() {
 echo ""
 echo "-----------sing-REALITY-box----------"
 echo ""
-}
+
 
 # install base
 install_base(){
