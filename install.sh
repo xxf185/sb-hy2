@@ -20,10 +20,7 @@ show_notice() {
     echo "                                                                                                                       "
     echo "#######################################################################################################################"
 }
-# Introduction animation
-print_with_delay "sb-hy2" 0.05
-echo ""
-echo ""
+
 # install base
 install_base(){
   # Check if jq is installed, and install it if not
