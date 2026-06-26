@@ -337,42 +337,6 @@ write_config() {
         "key_path": "$KEY_FILE",
         "alpn": ["h3"]
       }
-    },
-    {
-      "type": "tuic",
-      "tag": "tuic",
-      "listen": "::",
-      "listen_port": $TUIC_LISTEN_PORT,
-      "users": [
-        {
-          "uuid": "$UUID",
-          "password": "$AUTH_PASS"
-        }
-      ],
-      "congestion_control": "bbr",
-      "tls": {
-        "enabled": true,
-        "certificate_path": "$CERT_FILE",
-        "key_path": "$KEY_FILE",
-        "alpn": ["h3"]
-      }
-    },
-    {
-      "type": "anytls",
-      "tag": "anytls",
-      "listen": "::",
-      "listen_port": $ANYTLS_LISTEN_PORT,
-      "users": [
-        {
-          "password": "$AUTH_PASS"
-        }
-      ],
-      "tls": {
-        "enabled": true,
-        "certificate_path": "$CERT_FILE",
-        "key_path": "$KEY_FILE"
-      }
-    }
   ],
   "outbounds": [
     {
