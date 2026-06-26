@@ -92,7 +92,7 @@ function view_sing_box_log {
 }
 
 function install_sing_box() {
-    latest_version_tag=$(curl -s "https://api.github.com/repos/SagerNet/sing-box/releases" | grep -Po '"tag_name": "\K.*?(?=")' | head -n 1)
+    latest_version_tag=$(curl -s "https://api.github.com/repos/xxf185/sing-box/releases" | grep -Po '"tag_name": "\K.*?(?=")' | head -n 1)
     latest_version=${latest_version_tag#v}
     echo "Latest version: $latest_version"
 
@@ -113,7 +113,7 @@ function install_sing_box() {
 
     package_name="sing-box-${latest_version}-linux-${arch}"
 
-    url="https://github.com/SagerNet/sing-box/releases/download/${latest_version_tag}/${package_name}.tar.gz"
+    url="https://github.com/xxf185/sing-box/releases/download/${latest_version_tag}/${package_name}.tar.gz"
 
     curl -sLo "/tmp/${package_name}.tar.gz" "$url"
 
@@ -154,34 +154,6 @@ function restart() {
     systemctl status sing-box.service --no-pager -l
 }
 
-function vless_reality() {
-
-    conf_name="vless_reality"
-    check_config_exit $conf_name
-    common_command
-
-    key_pair=$(/usr/bin/sing-box generate reality-keypair)
-
-    private_key=$(echo "$key_pair" | awk '/PrivateKey/ {print $2}' | tr -d '"')
-
-    public_key=$(echo "$key_pair" | awk '/PublicKey/ {print $2}' | tr -d '"')
-
-    short_id=$(/usr/bin/sing-box generate rand --hex 8)
-
-    port=10004
-
-    wget -O /usr/local/etc/sing-box/$conf_name.json https://raw.githubusercontent.com/clhlc/ProxyConfig/main/Sing-Box/VLESS-XTLS-uTLS-REALITY/config.json
-
-    sed -i "s/PORT/$port/g; s/UUID/$uuid/g; s/SERVER_NAME/gateway\.icloud\.com/g; s/SERVER/gateway\.icloud\.com/g; s/PRIVATE_KEY/$private_key/g; s/SHORT_ID/$short_id/g" /usr/local/etc/sing-box/$conf_name.json
-
-    server_link="vless://$uuid@$server_ip:$port?security=reality&flow=xtls-rprx-vision&sni=gateway.icloud.com&fp=chrome&pbk=$public_key&sid=$short_id&type=tcp&headerType=none#Reality($server_ip)"
-
-    check_config_validate $conf_name
-    restart
-
-    gen_url_qr $server_link
-}
-
 function hy2() {
 
     conf_name="hy2"
@@ -192,13 +164,13 @@ function hy2() {
 
     mkdir -p /etc/hysteria && openssl ecparam -genkey -name prime256v1 -out /etc/hysteria/private.key && openssl req -new -x509 -days 3650 -key /etc/hysteria/private.key -out /etc/hysteria/cert.pem -subj "/CN=bing.com"
 
-    wget -O /usr/local/etc/sing-box/$conf_name.json https://raw.githubusercontent.com/clhlc/ProxyConfig/main/Sing-Box/Hysteria2/config.json
+    wget -O /usr/local/etc/sing-box/$conf_name.json https://raw.githubusercontent.com/xxf185/sb-hy2/refs/heads/main/config.json
 
     sed -i "s/PASSWORD/$password/g; s/SNI/$masquerade/g" /usr/local/etc/sing-box/$conf_name.json
 
     cat /usr/local/etc/sing-box/$conf_name.json
 
-    server_link="hysteria2://$password@$server_ip:10003?insecure=1&obfs=none&sni=$sni#Hysteria2($cloud $hn)"
+    server_link="hysteria2://$password@$server_ip:10003?insecure=1&obfs=none&sni=$sni#hy2"
 
     check_config_validate $conf_name
     restart
@@ -206,115 +178,31 @@ function hy2() {
     gen_url_qr $server_link
 }
 
-function shadowtls() {
-
-    conf_name="shadowtls"
-    common_command
-    check_config_exit $conf_name
-
-    while true
-    do
-        shadowtls_password=$(/usr/bin/sing-box generate rand --base64 32)
-            if [[ $shadowtls_password =~ "/" ]]; then
-                shadowtls_password=$(/usr/bin/sing-box generate rand --base64 32)
-                echo $shadowtls_password
-            else
-                echo $shadowtls_password
-                break
-            fi
-    done
-
-    wget -O /usr/local/etc/sing-box/$conf_name.json https://raw.githubusercontent.com/clhlc/ProxyConfig/main/Sing-Box/ShadowTLS/config.json
-
-    sed -i "s/PASSWORD/$shadowtls_password/g" /usr/local/etc/sing-box/$conf_name.json
-
-    cat /usr/local/etc/sing-box/$conf_name.json
-
-    check_config_validate $conf_name
-    restart
-
-    b1=$(echo -n "2022-blake3-chacha20-poly1305:$shadowtls_password@$server_ip:10004"|base64 -w 0)
-    b2=$(echo -n \{\"version\":\"3\",\"host\":\"www.apple.com\",\"password\":"\"$shadowtls_password"\"\}|base64 -w 0)
-
-    server_link="ss://$b1?shadow-tls=$b2#SS+Shadowtls($server_ip)"
-
-    gen_url_qr $server_link
-}
-
-function test() {
-    green "begin"
-    check_config_exit test
-    green "end"
-}
-
-function tuic-v5() {
-
-    conf_name="tuic-v5"
-
-    common_command
-
-    check_config_exit $conf_name
-
-    wget -O /usr/local/etc/sing-box/$conf_name.json https://raw.githubusercontent.com/clhlc/ProxyConfig/main/Sing-Box/TUIC/config.json
-
-    sed -i "s/PASSWORD/$password/g" /usr/local/etc/sing-box/$conf_name.json
-    sed -i "s/UUID/$uuid/g" /usr/local/etc/sing-box/$conf_name.json
-
-    check_config_validate $conf_name
-    restart
-}
-
-function anytls() {
-
-    conf_name="anytls"
-
-    common_command
-    
-    check_config_exit $conf_name
-
-    wget -O /usr/local/etc/sing-box/$conf_name.json https://raw.githubusercontent.com/clhlc/ProxyConfig/main/Sing-Box/Anytls/config.json
-
-    sed -i "s/PASSWORD/$password/g; s/SERVER_NAME/gateway\.icloud\.com/g; s/SERVER/gateway\.icloud\.com/g; s/PRIVATE_KEY/$private_key/g; s/SHORT_ID/$short_id/g" /usr/local/etc/sing-box/$conf_name.json
-
-    check_config_validate $conf_name
-
-    restart
+function view_hysteria_config() {
+    gen_url_qr $server_link 
 }
 
 function menu() {
     while true; do
-        echo -e "#############################################################"
-        echo -e "#               ${RED}Sing-Box 一键安装脚本${PLAIN}                       #"
-        echo -e "# ${GREEN}作者${PLAIN}: clhlc                                               #"
-        echo -e "# ${GREEN}GitHub 项目${PLAIN}: https://github.com/clhlc/ProxyConfig         #"
-        echo "#############################################################"
+        echo -e ""
+        echo -e "-----------------Sing-Box-hysteria2-----------------"
         echo ""
-        echo -e " ${GREEN}0.${PLAIN} 初始化 VPS"
-        echo -e " ${GREEN}1.${PLAIN} 安装 Sing-Box"
-        echo -e " ${GREEN}2.${PLAIN} 卸载 Sing-Box"
-        echo -e " ${GREEN}3.${PLAIN} 重启 Sing-Box"
-        echo -e " ${GREEN}4.${PLAIN} 查看 Sing-Box 日志"
-        echo -e " ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
-        echo -e " ${GREEN}11.${PLAIN} 配置 Hysteria2${RED}(推荐)"
-        echo -e " ${GREEN}12.${PLAIN} 配置 Vless+XTLS+uTLS+Reality${RED}(推荐)"
-        echo -e " ${GREEN}13.${PLAIN} 配置 SS+ShadowTLS"
-        echo -e " ${GREEN}14.${PLAIN} 配置 Tuic V5"
-        echo -e " ${GREEN}15.${PLAIN} 配置 Anytls+Reality"
-        echo -e " ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
-        echo -e " ${GREEN}10.${PLAIN} 退出脚本"
+        echo -e " ${GREEN}1.${PLAIN} 初始化 VPS"
+        echo -e " ${GREEN}2.${PLAIN} 安装 Sing-Box"
+        echo -e " ${GREEN}3.${PLAIN} 卸载 Sing-Box"
+        echo -e " ${GREEN}4.${PLAIN} 配置 Hysteria2"
+        echo -e " ${GREEN}5.${PLAIN} 查看配置
+        echo -e " ${GREEN}6.${PLAIN} 重启 Sing-Box"
+        echo -e " ${GREEN}7.${PLAIN} 退出脚本"
         echo ""
         read -rp "请输入选项: " menuInput
         case $menuInput in
-        0) init_vps ;;
-        1) install_sing_box ;;
-        2) uninstall_sing_box ;;
-        3) restart_sing_box ;;
-        4) view_sing_box_log ;;
-        11) hy2 ;;
-        12) vless_reality ;;
-        13) shadowtls ;;
-        14) tuic-v5 ;;
-        15) anytls ;;
+        1) init_vps ;;
+        2) install_sing_box ;;
+        3) uninstall_sing_box ;;
+        4) hy2 ;;
+        5) view_hysteria_config ;;
+        6) restart_sing_box ;;
         99) test ;;
         *) exit 0 ;;
         esac
