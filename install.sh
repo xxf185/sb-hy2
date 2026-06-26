@@ -434,25 +434,6 @@ EOF
   fi
 }
 
-ensure_firewall() {
-  # 仅尝试放行本机防火墙；云厂商安全组仍需手动放行
-  if have_cmd ufw; then
-    if ufw status 2>/dev/null | grep -q 'Status: active'; then
-      ufw allow "${HY2_LISTEN_PORT}/udp" >/dev/null 2>&1 || true
-      ufw allow "${TUIC_LISTEN_PORT}/udp" >/dev/null 2>&1 || true
-      ufw allow "${ANYTLS_LISTEN_PORT}/tcp" >/dev/null 2>&1 || true
-    fi
-  fi
-
-  if have_cmd firewall-cmd; then
-    if firewall-cmd --state >/dev/null 2>&1; then
-      firewall-cmd --permanent --add-port="${HY2_LISTEN_PORT}/udp" >/dev/null 2>&1 || true
-      firewall-cmd --permanent --add-port="${TUIC_LISTEN_PORT}/udp" >/dev/null 2>&1 || true
-      firewall-cmd --permanent --add-port="${ANYTLS_LISTEN_PORT}/tcp" >/dev/null 2>&1 || true
-      firewall-cmd --reload >/dev/null 2>&1 || true
-    fi
-  fi
-}
 
 stop_service() {
   if [ "$INIT_STYLE" = "systemd" ]; then
@@ -534,22 +515,6 @@ emit_hy2() {
   printf '%s\n' "hysteria2://$AUTH_PASS@$hp?sni=$SNI_HOST&alpn=h3&insecure=1&allowInsecure=1#HY2_$kind"
 }
 
-emit_tuic() {
-  host="$1"
-  kind="$2"
-  hp="$(fmt_hostport "$host" "$TUIC_LISTEN_PORT")"
-  userinfo="${UUID}%3A${AUTH_PASS}"
-  printf '%s\n' "tuic://$userinfo@$hp?sni=$SNI_HOST&alpn=h3&insecure=1&allowInsecure=1&congestion_control=bbr#TUIC_$kind"
-}
-
-emit_anytls() {
-  host="$1"
-  kind="$2"
-  hp="$(fmt_hostport "$host" "$ANYTLS_LISTEN_PORT")"
-  kind_lc="$(printf '%s' "$kind" | tr '[:upper:]' '[:lower:]')"
-  printf '%s\n' "anytls://$AUTH_PASS@$hp?security=tls&insecure=1&allowInsecure=1&type=tcp#AnyTLS_${kind_lc}"
-}
-
 show_node_set() {
   host="$1"
   label="$2"
@@ -613,8 +578,7 @@ reset_ports() {
   USED_TCP_PORTS=""
 
   HY2_LISTEN_PORT="$(prompt_port '请输入 HY2 端口 (UDP) [回车随机]' udp)"
-  TUIC_LISTEN_PORT="$(prompt_port '请输入 TUIC 端口 (UDP) [回车随机]' udp)"
-  ANYTLS_LISTEN_PORT="$(prompt_port '请输入 ANYTLS 端口 (TCP) [回车随机]' tcp)"
+
 
   save_state
   write_config
