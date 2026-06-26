@@ -26,11 +26,9 @@ SERVICE_FILE=""
 TMPDIR_SBOX=""
 
 USED_UDP_PORTS=""
-USED_TCP_PORTS=""
 
 HY2_LISTEN_PORT=""
-TUIC_LISTEN_PORT=""
-ANYTLS_LISTEN_PORT=""
+
 
 AUTH_PASS=""
 UUID=""
@@ -122,7 +120,6 @@ port_in_use() {
 
   case "$proto" in
     udp) files="/proc/net/udp /proc/net/udp6" ;;
-    tcp) files="/proc/net/tcp /proc/net/tcp6" ;;
     *)
       return 1
       ;;
@@ -164,7 +161,6 @@ proto_port_mark() {
   port="$2"
   case "$proto" in
     udp) USED_UDP_PORTS="$USED_UDP_PORTS $port" ;;
-    tcp) USED_TCP_PORTS="$USED_TCP_PORTS $port" ;;
   esac
 }
 
@@ -245,8 +241,6 @@ SNI_HOST=$(shq "$SNI_HOST")
 HY2_UP_MBPS=$(shq "$HY2_UP_MBPS")
 HY2_DOWN_MBPS=$(shq "$HY2_DOWN_MBPS")
 HY2_LISTEN_PORT=$(shq "$HY2_LISTEN_PORT")
-TUIC_LISTEN_PORT=$(shq "$TUIC_LISTEN_PORT")
-ANYTLS_LISTEN_PORT=$(shq "$ANYTLS_LISTEN_PORT")
 AUTH_PASS=$(shq "$AUTH_PASS")
 UUID=$(shq "$UUID")
 EOF
@@ -276,7 +270,7 @@ install_singbox() {
   latest_json="$TMPDIR_SBOX/latest.json"
   curl -fsSL -H 'User-Agent: curl' \
     -o "$latest_json" \
-    https://api.github.com/repos/SagerNet/sing-box/releases/latest
+    https://api.github.com/repos/xxf185/sing-box/releases/latest
 
   latest="$(sed -n 's/.*"tag_name":[[:space:]]*"\([^"]*\)".*/\1/p' "$latest_json" | head -n 1)"
   [ -n "$latest" ] || {
@@ -285,7 +279,7 @@ install_singbox() {
   }
 
   ver="${latest#v}"
-  url="https://github.com/SagerNet/sing-box/releases/download/${latest}/sing-box-${ver}-linux-${arch}.tar.gz"
+  url="https://github.com/xxf185/sing-box/releases/download/${latest}/sing-box-${ver}-linux-${arch}.tar.gz"
 
   log "[INFO] 下载 sing-box: $latest ($arch)"
   curl -fL --retry 3 -o "$TMPDIR_SBOX/sing-box.tar.gz" "$url"
@@ -339,42 +333,6 @@ write_config() {
         "alpn": ["h3"]
       }
     },
-    {
-      "type": "tuic",
-      "tag": "tuic",
-      "listen": "::",
-      "listen_port": $TUIC_LISTEN_PORT,
-      "users": [
-        {
-          "uuid": "$UUID",
-          "password": "$AUTH_PASS"
-        }
-      ],
-      "congestion_control": "bbr",
-      "tls": {
-        "enabled": true,
-        "certificate_path": "$CERT_FILE",
-        "key_path": "$KEY_FILE",
-        "alpn": ["h3"]
-      }
-    },
-    {
-      "type": "anytls",
-      "tag": "anytls",
-      "listen": "::",
-      "listen_port": $ANYTLS_LISTEN_PORT,
-      "users": [
-        {
-          "password": "$AUTH_PASS"
-        }
-      ],
-      "tls": {
-        "enabled": true,
-        "certificate_path": "$CERT_FILE",
-        "key_path": "$KEY_FILE"
-      }
-    }
-  ],
   "outbounds": [
     {
       "type": "direct",
@@ -434,25 +392,6 @@ EOF
   fi
 }
 
-ensure_firewall() {
-  # 仅尝试放行本机防火墙；云厂商安全组仍需手动放行
-  if have_cmd ufw; then
-    if ufw status 2>/dev/null | grep -q 'Status: active'; then
-      ufw allow "${HY2_LISTEN_PORT}/udp" >/dev/null 2>&1 || true
-      ufw allow "${TUIC_LISTEN_PORT}/udp" >/dev/null 2>&1 || true
-      ufw allow "${ANYTLS_LISTEN_PORT}/tcp" >/dev/null 2>&1 || true
-    fi
-  fi
-
-  if have_cmd firewall-cmd; then
-    if firewall-cmd --state >/dev/null 2>&1; then
-      firewall-cmd --permanent --add-port="${HY2_LISTEN_PORT}/udp" >/dev/null 2>&1 || true
-      firewall-cmd --permanent --add-port="${TUIC_LISTEN_PORT}/udp" >/dev/null 2>&1 || true
-      firewall-cmd --permanent --add-port="${ANYTLS_LISTEN_PORT}/tcp" >/dev/null 2>&1 || true
-      firewall-cmd --reload >/dev/null 2>&1 || true
-    fi
-  fi
-}
 
 stop_service() {
   if [ "$INIT_STYLE" = "systemd" ]; then
@@ -534,29 +473,12 @@ emit_hy2() {
   printf '%s\n' "hysteria2://$AUTH_PASS@$hp?sni=$SNI_HOST&alpn=h3&insecure=1&allowInsecure=1#HY2_$kind"
 }
 
-emit_tuic() {
-  host="$1"
-  kind="$2"
-  hp="$(fmt_hostport "$host" "$TUIC_LISTEN_PORT")"
-  userinfo="${UUID}%3A${AUTH_PASS}"
-  printf '%s\n' "tuic://$userinfo@$hp?sni=$SNI_HOST&alpn=h3&insecure=1&allowInsecure=1&congestion_control=bbr#TUIC_$kind"
-}
-
-emit_anytls() {
-  host="$1"
-  kind="$2"
-  hp="$(fmt_hostport "$host" "$ANYTLS_LISTEN_PORT")"
-  kind_lc="$(printf '%s' "$kind" | tr '[:upper:]' '[:lower:]')"
-  printf '%s\n' "anytls://$AUTH_PASS@$hp?security=tls&insecure=1&allowInsecure=1&type=tcp#AnyTLS_${kind_lc}"
-}
 
 show_node_set() {
   host="$1"
   label="$2"
   printf '\n[%s]\n' "$label"
   emit_hy2 "$host" "$label"
-  emit_tuic "$host" "$label"
-  emit_anytls "$host" "$label"
 }
 
 show_nodes() {
@@ -586,15 +508,14 @@ fresh_install() {
   log "[INFO] 检测到公网 IPv6: ${PUBLIC_IPV6:-未检测到}"
 
   HY2_LISTEN_PORT="$(prompt_port '请输入 HY2 端口 (UDP) [回车随机]' udp)"
-  TUIC_LISTEN_PORT="$(prompt_port '请输入 TUIC 端口 (UDP) [回车随机]' udp)"
-  ANYTLS_LISTEN_PORT="$(prompt_port '请输入 ANYTLS 端口 (TCP) [回车随机]' tcp)"
+
 
   gen_creds
   gen_cert
   save_state
   write_config
   write_service
-  ensure_firewall
+
 
   log "[INFO] 检查 sing-box 配置..."
   "$SB_BIN" check -c "$CONFIG_FILE"
@@ -610,15 +531,14 @@ reset_ports() {
 
   stop_service
   USED_UDP_PORTS=""
-  USED_TCP_PORTS=""
+
 
   HY2_LISTEN_PORT="$(prompt_port '请输入 HY2 端口 (UDP) [回车随机]' udp)"
-  TUIC_LISTEN_PORT="$(prompt_port '请输入 TUIC 端口 (UDP) [回车随机]' udp)"
-  ANYTLS_LISTEN_PORT="$(prompt_port '请输入 ANYTLS 端口 (TCP) [回车随机]' tcp)"
+
 
   save_state
   write_config
-  ensure_firewall
+
 
   log "[INFO] 检查 sing-box 配置..."
   "$SB_BIN" check -c "$CONFIG_FILE"
@@ -651,7 +571,7 @@ menu_loop() {
   load_state || true
 
   while :; do
-    printf '\n%s\n' "===== sing-box 3in1（hy2/tuic/Anytls）管理脚本 ====="
+    printf '\n%s\n' "----------sing-box-hy2----------"
     printf '%s\n' "1) 重装"
     printf '%s\n' "2) 卸载"
     printf '%s\n' "3) 重置端口"
