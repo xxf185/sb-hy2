@@ -191,7 +191,7 @@ function menu() {
         echo -e " ${GREEN}2.${PLAIN} 安装 Sing-Box"
         echo -e " ${GREEN}3.${PLAIN} 卸载 Sing-Box"
         echo -e " ${GREEN}4.${PLAIN} 配置 Hysteria2"
-        echo -e " ${GREEN}5.${PLAIN} 查看配置
+        echo -e " ${GREEN}5.${PLAIN} 查看配置"
         echo -e " ${GREEN}6.${PLAIN} 重启 Sing-Box"
         echo -e " ${GREEN}7.${PLAIN} 退出脚本"
         echo -e ""
