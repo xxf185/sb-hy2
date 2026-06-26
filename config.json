@@ -1,0 +1,34 @@
+{
+    "inbounds": [
+        {
+            "type": "hysteria2",
+            "listen": "::",
+            "listen_port": 10003,
+            "up_mbps": 100,
+            "down_mbps": 300,
+            "users": [
+                {
+                    "password": "PASSWORD"
+                }
+            ],
+            "masquerade": {
+                "type": "proxy",
+                "url": "SNI",
+                "rewrite_host": true
+            },
+            "tls": {
+                "enabled": true,
+                "alpn": [
+                    "h3"
+                ],
+                "certificate_path": "/etc/hysteria/cert.pem",
+                "key_path": "/etc/hysteria/private.key"
+            }
+        }
+    ],
+    "outbounds": [
+        {
+            "type": "direct"
+        }
+    ]
+}
