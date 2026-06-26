@@ -1,6 +1,5 @@
 #!/bin/sh
-set -eu
-umask 077
+
 
 BASE_DIR="/etc/sing-box"
 CONFIG_FILE="$BASE_DIR/config.json"
