@@ -111,11 +111,7 @@ show_client_configuration() {
   echo ""
   echo ""
   show_notice "sing-box 客户端配置文件"
-  # Generate the link
-  echo ""
-  echo ""
-  cat /root/sbconfig_client.json
-  show_notice "Reality 客户端通用链接" 
+
 
   # Get current listen port
   hy_current_listen_port=$(jq -r '.inbounds[1].listen_port' /root/sbconfig_server.json)
