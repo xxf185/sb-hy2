@@ -77,10 +77,6 @@ function restart_sing_box {
     systemctl restart sing-box.service
 }
 
-function view_sing_box_log {
-    systemctl status sing-box.service
-}
-
 function install_sing_box() {
     latest_version_tag=$(curl -s "https://api.github.com/repos/xxf185/sing-box/releases" | grep -Po '"tag_name": "\K.*?(?=")' | head -n 1)
     latest_version=${latest_version_tag#v}
