@@ -194,7 +194,7 @@ function menu() {
         echo -e " ${GREEN}5.${PLAIN} 查看配置
         echo -e " ${GREEN}6.${PLAIN} 重启 Sing-Box"
         echo -e " ${GREEN}7.${PLAIN} 退出脚本"
-        echo ""
+       echo ""
         read -rp "请输入选项: " menuInput
         case $menuInput in
         1) init_vps ;;
