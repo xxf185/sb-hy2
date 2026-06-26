@@ -71,6 +71,7 @@ function uninstall_sing_box() {
     rm /usr/bin/sing-box
     rm /etc/systemd/system/sing-box.service
     rm -rf /usr/local/etc/sing-box
+    echo -e "卸载完成"
 }
 
 function restart_sing_box {
@@ -80,8 +81,6 @@ function restart_sing_box {
 function install_sing_box() {
     apt update
     apt install -yqq qrencode net-tools
-
-    iptables -F
     
     latest_version_tag=$(curl -s "https://api.github.com/repos/xxf185/sing-box/releases" | grep -Po '"tag_name": "\K.*?(?=")' | head -n 1)
     latest_version=${latest_version_tag#v}
