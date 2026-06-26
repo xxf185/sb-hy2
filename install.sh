@@ -116,26 +116,7 @@ show_client_configuration() {
   echo ""
   cat /root/sbconfig_client.json
   show_notice "Reality 客户端通用链接" 
-  echo ""
-  echo ""
-  server_link="vless://$uuid@$server_ip:$current_listen_port?encryption=none&flow=xtls-rprx-vision&security=reality&sni=$current_server_name&fp=chrome&pbk=$public_key&sid=$short_id&type=tcp&headerType=none#SING-BOX-TCP"
-  echo ""
-  echo ""
-  echo "$server_link"
-  echo ""
-  echo ""
-  # Print the server details
-  show_notice "Reality 客户端通用参数" 
-  echo ""
-  echo ""
-  echo "服务器ip: $server_ip"
-  echo "监听端口: $current_listen_port"
-  echo "UUID: $uuid"
-  echo "域名SNI: $current_server_name"
-  echo "Public Key: $public_key"
-  echo "Short ID: $short_id"
-  echo ""
-  echo ""
+
   # Get current listen port
   hy_current_listen_port=$(jq -r '.inbounds[1].listen_port' /root/sbconfig_server.json)
   # Get current server name
@@ -191,21 +172,7 @@ dns:
     ipcidr:
       - 240.0.0.0/4
 
-proxies:        
-  - name: Reality
-    type: vless
-    server: $server_ip
-    port: $current_listen_port
-    uuid: $uuid
-    network: tcp
-    udp: true
-    tls: true
-    flow: xtls-rprx-vision
-    servername: $current_server_name
-    client-fingerprint: chrome
-    reality-opts:
-      public-key: $public_key
-      short-id: $short_id
+
 
   - name: Hysteria2
     type: hysteria2
@@ -226,14 +193,12 @@ proxy-groups:
     type: select
     proxies:
       - 自动选择
-      - Reality
       - Hysteria2
       - DIRECT
 
   - name: 自动选择
     type: url-test #选出延迟最低的机场节点
     proxies:
-      - Reality
       - Hysteria2
     url: "http://www.gstatic.com/generate_204"
     interval: 300
@@ -251,10 +216,10 @@ EOF
 
 install_base
 
-# Check if reality.json, sing-box, and sing-box.service already exist
+# Check sing-box.service already exist
 if [ -f "/root/sbconfig_server.json" ] && [ -f "/root/sing-box" ] && [ -f "/root/public.key.b64" ] && [ -f "/etc/systemd/system/sing-box.service" ]; then
 
-    echo "sing-box-reality-hysteria2已经安装"
+    echo "sing--hysteria2已经安装"
     echo ""
     echo "请选择选项:"
     echo ""
@@ -376,34 +341,6 @@ if [ -f "/root/sbconfig_server.json" ] && [ -f "/root/sing-box" ] && [ -f "/root
 
 download_sing_box
 
-# reality
-echo "Start configuring Reality config..."
-echo ""
-# Generate key pair
-echo "Generating key pair..."
-key_pair=$(/root/sing-box generate reality-keypair)
-echo "Key pair generation complete."
-echo ""
-
-# Extract private key and public key
-private_key=$(echo "$key_pair" | awk '/PrivateKey/ {print $2}' | tr -d '"')
-public_key=$(echo "$key_pair" | awk '/PublicKey/ {print $2}' | tr -d '"')
-
-# Save the public key in a file using base64 encoding
-echo "$public_key" | base64 > /root/public.key.b64
-
-# Generate necessary values
-uuid=$(/root/sing-box generate uuid)
-short_id=$(/root/sing-box generate rand --hex 8)
-
-# Ask for listen port
-read -p "Enter Reality desired listen port (default: 443): " listen_port
-listen_port=${listen_port:-443}
-echo ""
-# Ask for server name (sni)
-read -p "Enter server name/SNI (default: itunes.apple.com): " server_name
-server_name=${server_name:-itunes.apple.com}
-echo ""
 # hysteria2
 echo "Start configuring Hysteria2 config..."
 echo ""
@@ -432,34 +369,6 @@ jq -n --arg listen_port "$listen_port" --arg server_name "$server_name" --arg pr
     "timestamp": true
   },
   "inbounds": [
-    {
-      "type": "vless",
-      "tag": "vless-in",
-      "listen": "::",
-      "listen_port": ($listen_port | tonumber),
-      "sniff": true,
-      "sniff_override_destination": true,
-      "domain_strategy": "ipv4_only",
-      "users": [
-        {
-          "uuid": $uuid,
-          "flow": "xtls-rprx-vision"
-        }
-      ],
-      "tls": {
-        "enabled": true,
-        "server_name": $server_name,
-          "reality": {
-          "enabled": true,
-          "handshake": {
-            "server": $server_name,
-            "server_port": 443
-          },
-          "private_key": $private_key,
-          "short_id": [$short_id]
-        }
-      }
-    },
     {
         "type": "hysteria2",
         "tag": "hy2-in",
@@ -586,28 +495,7 @@ jq -n --arg listen_port "$listen_port" --arg server_name "$server_name" --arg pu
         "sing-box-hysteria2"
       ]
     },
-    {
-      "type": "vless",
-      "tag": "sing-box-reality",
-      "uuid": $uuid,
-      "flow": "xtls-rprx-vision",
-      "packet_encoding": "xudp",
-      "server": $server_ip,
-      "server_port": ($listen_port | tonumber),
-      "tls": {
-        "enabled": true,
-        "server_name": $server_name,
-        "utls": {
-          "enabled": true,
-          "fingerprint": "chrome"
-        },
-        "reality": {
-          "enabled": true,
-          "public_key": $public_key,
-          "short_id": $short_id,
-        }
-      }
-    },
+
     {
             "type": "hysteria2",
             "server": $server_ip,
@@ -642,7 +530,6 @@ jq -n --arg listen_port "$listen_port" --arg server_name "$server_name" --arg pu
       "tag": "urltest",
       "type": "urltest",
       "outbounds": [
-        "sing-box-reality",
         "sing-box-hysteria2"
       ]
     }
