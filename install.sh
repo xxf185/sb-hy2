@@ -144,6 +144,12 @@ function restart() {
     systemctl status sing-box.service --no-pager -l
 }
 
+function test() {
+    green "begin"
+    check_config_exit test
+    green "end"
+}
+
 function hy2() {
 
     conf_name="hy2"
