@@ -48,7 +48,7 @@ function gen_url_qr() {
     green "1、粘贴URL添加节点"
     echo ""
 
-    red "$*"
+    yellow "$*"
 
     green "2、扫描二维码添加节点"
     echo ""
