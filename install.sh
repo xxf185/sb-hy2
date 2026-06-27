@@ -190,7 +190,7 @@ function menu() {
         echo -e " ${GREEN}5.${PLAIN} 重启 Sing-Box"
         echo -e " ${GREEN}0.${PLAIN} 退出脚本"
         echo -e ""
-        read -rp "请输入选项: " menuInput
+        read -rp "选项: " menuInput
         case $menuInput in
         1) install_sing_box ;;
         2) uninstall_sing_box ;;
